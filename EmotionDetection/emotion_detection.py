@@ -8,15 +8,6 @@ from collections import defaultdict
 class EmotionDetectionError(Exception):
     """Base Class for Errors in this Module."""
 
-
-class EmotionDetectionInferenceError(EmotionDetectionError):
-    """Input is not suitable to be processed by EmotionDetection (empty or not recognisable)."""
-
-
-class EmotionDetectionTechnicalError(EmotionDetectionError):
-    """EmotionDetection API is not reachable or fails."""
-
-
 def emotion_detector(text_to_analyse):
     """
     Queries IBM's Watson NLP API for emotion detection of a given text string
@@ -30,8 +21,6 @@ def emotion_detector(text_to_analyse):
     ------
     EmotionDetectionError
         EmotionDetection API is not reachable or fails
-    EmotionDetectionError
-        Input not suitable to be processed by EmotionDetection (empty or not recognisable)
 
     Returns
     -------
@@ -46,31 +35,33 @@ def emotion_detector(text_to_analyse):
     headers = {"grpc-metadata-mm-model-id": "emotion_aggregated-workflow_lang_en_stock"}
     myobj = {"raw_document": {"text": text_to_analyse}}
 
-    # check input
-    if not text_to_analyse or not text_to_analyse.strip():
-        raise EmotionDetectionInferenceError("input is empty or blank.")
-
     try:
         response = requests.post(url, json=myobj, headers=headers, timeout=30)
 
         if response.status_code == 400:
             # watson API couldn't process input string
-            raise EmotionDetectionInferenceError(
-                f"Bad HTTP status code from watson API: {response.status_code}"
-            )
+
+            return {
+                'anger': None,
+                'disgust': None,
+                'fear': None,
+                'joy': None,
+                'sadness': None,
+                'dominant_emotion': None
+            }
 
         response.raise_for_status()
 
         # format results to be returned
         response_json = json.loads(response.text)
-        if not "emotionPredictions" in response_json:
+        if "emotionPredictions" not in response_json:
             raise EmotionDetectionTechnicalError(
                 "No emotionPredictions found in API response"
             )
 
         emotion_sums = defaultdict(lambda: {"count": 0, "score_sum": 0.0})
         for emotion in response_json["emotionPredictions"]:
-            if not "emotion" in emotion:
+            if "emotion" not in emotion:
                 continue
 
             # accumulate scores and counts of all emotions
@@ -94,6 +85,6 @@ def emotion_detector(text_to_analyse):
         return emotion_avgs | {"dominant_emotion": dominant_emotion}
 
     except requests.exceptions.RequestException as e:
-        raise EmotionDetectionTechnicalError(
-            f"Technical API failure: {type(e).__name__}"
+        raise EmotionDetectionError(
+            f"Error using API failure: {type(e).__name__}"
         ) from e

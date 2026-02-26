@@ -30,20 +30,22 @@ def api_emotion_detector():
     The output returned shows scores for each detected emotion and the dominant emotion.
     """
     param_text = request.args.get('textToAnalyze')
-    if param_text:
-        response = emotion_detector(param_text)
-        out_str = (
-            f"For the given statement, the system response is "
-            f"'anger': {response['anger']}, "
-            f"'disgust': {response['disgust']}, "
-            f"'fear': {response['fear']}, "
-            f"'joy': {response['joy']} and "
-            f"'sadness': {response['sadness']}. "
-            f"the dominant emotion is {response['dominant_emotion']}."
-        )
-        return out_str
-    else:
-        return None
+    response = emotion_detector(param_text)
+
+    if response['dominant_emotion'] is None:
+        return("Invalid text! Please try again!")
+
+    out_str = (
+        f"For the given statement, the system response is "
+        f"'anger': {response['anger']}, "
+        f"'disgust': {response['disgust']}, "
+        f"'fear': {response['fear']}, "
+        f"'joy': {response['joy']} and "
+        f"'sadness': {response['sadness']}. "
+        f"the dominant emotion is {response['dominant_emotion']}."
+    )
+    return out_str
+
 
 if __name__ == "__main__":
     # start the flask app and deploy it on localhost:5000
