@@ -68,21 +68,15 @@ def emotion_detector(text_to_analyse):
                 "No emotionPredictions found in API response"
             )
 
-        emotion_sums = {}
+        emotion_sums = defaultdict(lambda: {"count": 0, "score_sum": 0.0})
         for emotion in response_json["emotionPredictions"]:
             if not "emotion" in emotion:
                 continue
 
             # accumulate scores and counts of all emotions
-            for emo_name in emotion["emotion"].keys():
-                if emo_name not in emotion_sums:
-                    emotion_sums[emo_name] = {
-                        "count": 1,
-                        "score_sum": emotion["emotion"][emo_name],
-                    }
-                else:
-                    emotion_sums[emo_name]["score_sum"] += emotion["emotion"][emo_name]
-                    emotion_sums[emo_name]["count"] += 1
+            for emo_name, emo_value in emotion["emotion"].items():
+                emotion_sums[emo_name]["score_sum"] += emo_value
+                emotion_sums[emo_name]["count"] += 1
 
         if not emotion_sums:
             raise EmotionDetectionInferenceError(
@@ -90,7 +84,7 @@ def emotion_detector(text_to_analyse):
             )
 
         # avg emotion scores
-        emotion_avgs = defaultdict(lambda: {"count": 0, "score_sum": 0.0})
+        emotion_avgs = {}
         for emo, data in emotion_sums.items():
             emotion_avgs[emo] = data["score_sum"] / data["count"]
 
