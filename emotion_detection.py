@@ -1,6 +1,8 @@
 """Emotion Detection via IBM watson"""
 
 import requests
+import json
+from collections import defaultdict
 
 
 class EmotionDetectionError(Exception):
@@ -33,8 +35,9 @@ def emotion_detector(text_to_analyse):
 
     Returns
     -------
-    response_text : str
-        the text attribute of the API response object
+    emotion_scores : dict
+        contains the name of each emotion as key and the average score as value,
+        plus the name of the emotion with highest score as value for key "dominant_emotion"
     """
     url = (
         "https://sn-watson-emotion.labs.skills.network"
@@ -57,7 +60,44 @@ def emotion_detector(text_to_analyse):
             )
 
         response.raise_for_status()
-        return response.text
+
+        # format results to be returned
+        response_json = json.loads(response.text)
+        if not "emotionPredictions" in response_json:
+            raise EmotionDetectionTechnicalError(
+                "No emotionPredictions found in API response"
+            )
+
+        emotion_sums = {}
+        for emotion in response_json["emotionPredictions"]:
+            if not "emotion" in emotion:
+                continue
+
+            # accumulate scores and counts of all emotions
+            for emo_name in emotion["emotion"].keys():
+                if emo_name not in emotion_sums:
+                    emotion_sums[emo_name] = {
+                        "count": 1,
+                        "score_sum": emotion["emotion"][emo_name],
+                    }
+                else:
+                    emotion_sums[emo_name]["score_sum"] += emotion["emotion"][emo_name]
+                    emotion_sums[emo_name]["count"] += 1
+
+        if not emotion_sums:
+            raise EmotionDetectionInferenceError(
+                "No emotions could be extracted from the API response."
+            )
+
+        # avg emotion scores
+        emotion_avgs = defaultdict(lambda: {"count": 0, "score_sum": 0.0})
+        for emo, data in emotion_sums.items():
+            emotion_avgs[emo] = data["score_sum"] / data["count"]
+
+        # find dominant emotion
+        dominant_emotion = max(emotion_avgs, key=emotion_avgs.get)
+
+        return emotion_avgs | {"dominant_emotion": dominant_emotion}
 
     except requests.exceptions.RequestException as e:
         raise EmotionDetectionTechnicalError(
