@@ -1,4 +1,6 @@
 #!/usr/bin/python3.11
+"""flask server for Final Project (Developing AI Applications with Python and Flask)"""
+
 from flask import Flask, request, render_template
 from EmotionDetection import emotion_detector
 
@@ -9,8 +11,8 @@ def api_not_found(error):
     """
     general 404 error handler
     """
-    
-    return({"message": "API path not found"}, 404)
+
+    return(f"Page not found - Error {error}", 404)
 
 # Define a route for the root URL ("/")
 @app.route("/")
@@ -33,7 +35,7 @@ def api_emotion_detector():
     response = emotion_detector(param_text)
 
     if response['dominant_emotion'] is None:
-        return("Invalid text! Please try again!")
+        return "Invalid text! Please try again!"
 
     out_str = (
         f"For the given statement, the system response is "
